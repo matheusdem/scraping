@@ -1,520 +1,825 @@
-<!doctype html>
-<html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Diário de Stories</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap">
-<style>
-/* Layout: header + resumo do mês + calendário compacto 7 colunas; modais para registro, dia e grupos */
-:root{
-  --bg:#f5f4f8; --surface:#ffffff; --surface-2:#efedf4; --line:#dcd8e6;
-  --fg:#1d1a26; --muted:#6b6579; --accent:#4b3bd1; --accent-fg:#ffffff;
-  --danger:#c2334d; --today:#4b3bd1;
-  --g0:#2f6fed; --g1:#d9467a; --g2:#13957a; --g3:#d98a12; --g4:#7a52c7;
-  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
-  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --r:10px;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#14121b; --surface:#1d1a27; --surface-2:#262233; --line:#363046;
-  --fg:#ece9f4; --muted:#a39db3; --accent:#8f83ff; --accent-fg:#14121b;
-  --danger:#ff6b85; --today:#8f83ff;
-  --g0:#5f92ff; --g1:#f0709c; --g2:#3cc4a3; --g3:#f2ab3c; --g4:#a587ee;
-  color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#14121b; --surface:#1d1a27; --surface-2:#262233; --line:#363046;
-  --fg:#ece9f4; --muted:#a39db3; --accent:#8f83ff; --accent-fg:#14121b;
-  --danger:#ff6b85; --today:#8f83ff;
-  --g0:#5f92ff; --g1:#f0709c; --g2:#3cc4a3; --g3:#f2ab3c; --g4:#a587ee;
-  color-scheme:dark}
-*{box-sizing:border-box}
-body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
-.wrap{max-width:760px;margin:0 auto;padding:20px 16px 48px;display:flex;flex-direction:column;gap:18px}
-button{font:inherit;color:inherit;cursor:pointer}
-button:focus-visible,input:focus-visible,.day:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
-h1{font-size:1.6rem}
-h2{font-size:1.15rem}
-.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.handle{display:flex;align-items:center;gap:6px;color:var(--muted);margin-top:4px}
-.handle input{border:none;background:transparent;color:var(--fg);font:500 15px var(--body);padding:2px 4px;border-radius:6px;width:180px}
-.handle input:hover{background:var(--surface-2)}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-.btn{border:1px solid var(--line);background:var(--surface);padding:9px 14px;border-radius:999px;font-weight:600;font-size:14px}
-.btn:hover{background:var(--surface-2)}
-.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-.btn.primary:hover{filter:brightness(1.08)}
-.btn.danger{color:var(--danger)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.banner{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;font-size:14px;color:var(--muted)}
-
-.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
-.stat .k{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stat .v{font-family:var(--display);font-size:1.5rem;font-variant-numeric:tabular-nums}
-.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
-
-.cal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
-.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.calhead h2{text-transform:capitalize}
-.nav{display:flex;gap:4px}
-.nav button{border:1px solid var(--line);background:transparent;width:34px;height:34px;border-radius:50%;font-size:16px}
-.nav button:hover{background:var(--surface-2)}
-.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-.wd{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center;padding-bottom:4px}
-.day{aspect-ratio:1/1;max-width:100%;border:1px solid transparent;background:var(--surface-2);border-radius:8px;padding:5px;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;min-width:0}
-.day:hover{border-color:var(--line)}
-.day.out{visibility:hidden}
-.day.today{border-color:var(--today)}
-.day .n{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
-.day.today .n{color:var(--today);font-weight:600}
-.day .c{font-family:var(--display);font-size:1.15rem;line-height:1;font-variant-numeric:tabular-nums;align-self:flex-end}
-.day.empty .c{color:transparent}
-.bars{display:flex;gap:2px;height:4px}
-.bars span{border-radius:2px;flex:1}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:10px}
-.legend span{display:flex;align-items:center;gap:6px}
-
-dialog{border:none;border-radius:16px;padding:0;background:var(--surface);color:var(--fg);width:min(520px,calc(100vw - 32px));max-height:calc(100dvh - 48px)}
-dialog::backdrop{background:rgba(10,8,20,.5)}
-.mbody{padding:18px;display:flex;flex-direction:column;gap:14px}
-.mhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.x{border:none;background:transparent;font-size:22px;line-height:1;color:var(--muted);width:32px;height:32px;border-radius:50%}
-.x:hover{background:var(--surface-2)}
-.drop{border:2px dashed var(--line);border-radius:12px;min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px;color:var(--muted);font-size:14px;background:var(--surface-2);position:relative}
-.drop.over{border-color:var(--accent)}
-.drop img{max-height:300px;border-radius:8px;display:block}
-.drop label{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline}
-.row{display:flex;gap:10px;flex-wrap:wrap}
-.field{display:flex;flex-direction:column;gap:4px;flex:1 1 140px;min-width:0}
-.field>span{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.field input{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:8px 10px;font:inherit}
-.seg{display:flex;gap:6px;flex-wrap:wrap}
-.chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
-.chip[aria-pressed="true"]{border-color:var(--chip,var(--accent));background:color-mix(in srgb,var(--chip,var(--accent)) 14%,var(--surface))}
-.hint{font-size:13px;color:var(--muted);margin:0}
-.foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-
-.dsum{display:flex;gap:8px;flex-wrap:wrap}
-.dsum .pill{background:var(--surface-2);border-radius:999px;padding:4px 10px;font-size:13px;display:inline-flex;gap:6px;align-items:center;font-variant-numeric:tabular-nums}
-.list{display:flex;flex-direction:column;gap:10px}
-.item{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px}
-.thumb{width:72px;height:110px;border-radius:8px;background:var(--surface-2);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted)}
-.item .meta{display:flex;flex-direction:column;gap:8px;min-width:0}
-.item .t{font-weight:600;font-variant-numeric:tabular-nums}
-.item .t small{font-weight:400;color:var(--muted);margin-left:6px}
-.item .ops{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.link{border:none;background:none;padding:0;font-size:13px;color:var(--muted);text-decoration:underline}
-.link.danger{color:var(--danger)}
-.emptyday{color:var(--muted);font-size:14px;text-align:center;padding:24px 0}
-.grp{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
-.grp input[type=text]{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:8px 10px;font:inherit;min-width:0}
-.swatch{width:22px;height:22px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;font-weight:500}
-@media (max-width:480px){.day{padding:3px}.day .c{font-size:.95rem}h1{font-size:1.35rem}}
-@media (prefers-reduced-motion:no-preference){.day,.btn,.chip{transition:background .15s,border-color .15s}}
-body{margin:0}
-img{max-width:100%}
-[hidden]{display:none!important}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contagem de Stories de SA</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body>
-<div class="wrap">
-  <header class="top">
-    <div>
-      <h1>Diário de Stories</h1>
-      <div class="handle">Perfil acompanhado: <span>@</span><input id="handle" type="text" placeholder="usuario" aria-label="Perfil acompanhado"></div>
+<body class="bg-slate-900 text-slate-100 h-full flex flex-col antialiased selection:bg-pink-500 selection:text-white">
+
+    <div id="app" class="flex-1 flex flex-col h-full w-full overflow-hidden">
+        
+        <!-- ==================== TELA DE LOGIN / CADASTRO ==================== -->
+        <div id="auth-screen" class="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900">
+            <div class="max-w-md w-full bg-slate-800/80 backdrop-blur-xl border border-slate-700 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+                <!-- Decorative glow -->
+                <div class="absolute -top-24 -right-24 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="text-center mb-8 relative">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-pink-500 to-indigo-600 text-white shadow-lg shadow-pink-500/30 mb-4 text-2xl">
+                        <i class="fa-solid fa-camera-retro"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold tracking-tight">Stories Battle Tracker</h1>
+                    <p class="text-slate-400 text-sm mt-1">Contagem compartilhada de stories por grupo</p>
+                </div>
+
+                <p class="text-center text-xs text-slate-500 mb-6"><i class="fa-solid fa-lock mr-1"></i> Acesso restrito a usuários autorizados</p>
+
+                <!-- Formulário -->
+                <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">E-mail</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-regular fa-user"></i></span>
+                            <input type="email" id="auth-username" autocomplete="email" required class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 pl-10 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-600" placeholder="voce@email.com">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Senha</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" id="auth-password" autocomplete="current-password" minlength="6" required class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 pl-10 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-600" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="auth-submit-btn" class="w-full mt-2 bg-gradient-to-r from-pink-500 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-indigo-500/25 transition-all transform active:scale-95">
+                        Acessar
+                    </button>
+                </form>
+
+                <div id="auth-error" class="mt-4 text-center text-rose-400 text-xs hidden"></div>
+                <div id="auth-info" class="mt-4 text-center text-emerald-400 text-xs hidden"></div>
+            </div>
+        </div>
+
+        <!-- ==================== DASHBOARD PRINCIPAL ==================== -->
+        <div id="dashboard-screen" class="flex-1 flex flex-col h-full hidden overflow-y-auto">
+            <!-- Navbar -->
+            <header class="bg-slate-800/90 border-b border-slate-700/70 backdrop-blur-md sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
+                        <i class="fa-solid fa-camera-retro"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-base tracking-tight flex items-center gap-2">
+                            Stories Tracker <span id="user-display-badge" class="text-xs font-normal bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30"></span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Validação e Comparação de Postagens</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button onclick="openSettingsModal()" class="px-3 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border border-slate-600/50">
+                        <i class="fa-solid fa-gear"></i> <span class="hidden sm:inline">Configurações</span>
+                    </button>
+                    <button onclick="handleLogout()" class="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border border-rose-500/20">
+                        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Sair</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Conteúdo Principal -->
+            <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+                
+                <!-- Painel de Comparação Lado a Lado & Pontuação -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Card Grupo A -->
+                    <div class="bg-gradient-to-br from-indigo-950/60 to-slate-800/80 border border-indigo-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                        <div class="absolute top-0 right-0 p-6 opacity-10 text-indigo-400 text-6xl">
+                            <i class="fa-solid fa-user-group"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span id="label-group-a" class="text-xs font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">Grupo 1</span>
+                                <span class="text-xs text-slate-400">Total Stories</span>
+                            </div>
+                            <div class="flex items-baseline space-x-2 mt-4">
+                                <span id="score-group-a" class="text-4xl font-black text-white tracking-tight">0</span>
+                                <span class="text-slate-400 text-sm">posts</span>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-700/50">
+                            <div class="flex justify-between text-xs text-slate-400 mb-1.5">
+                                <span id="percent-group-a-label">Progresso</span>
+                                <span id="percent-group-a">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-900/80 rounded-full h-2 overflow-hidden border border-slate-700/50">
+                                <div id="bar-group-a" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Batalha / Diferença -->
+                    <div class="bg-slate-800/80 border border-slate-700 rounded-3xl p-6 shadow-xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-pink-500/5 to-purple-500/5"></div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Diferença de Placar</span>
+                        <div id="battle-status-icon" class="text-3xl text-amber-400 mb-2">
+                            <i class="fa-solid fa-scale-balanced"></i>
+                        </div>
+                        <h3 id="battle-diff-text" class="text-lg font-bold text-white">Empate Técnico!</h3>
+                        <p id="battle-lead-text" class="text-xs text-slate-400 mt-1">Nenhum grupo na liderança no momento.</p>
+                        
+                        <div class="mt-4 px-4 py-1.5 bg-slate-900/60 rounded-full border border-slate-700 text-xs text-slate-300">
+                            Total Geral Registrado: <span id="total-overall-posts" class="font-bold text-white">0</span> stories
+                        </div>
+                    </div>
+
+                    <!-- Card Grupo B -->
+                    <div class="bg-gradient-to-br from-pink-950/60 to-slate-800/80 border border-pink-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                        <div class="absolute top-0 right-0 p-6 opacity-10 text-pink-400 text-6xl">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span id="label-group-b" class="text-xs font-bold uppercase tracking-wider text-pink-400 bg-pink-500/10 px-3 py-1 rounded-full border border-pink-500/20">Grupo 2</span>
+                                <span class="text-xs text-slate-400">Total Stories</span>
+                            </div>
+                            <div class="flex items-baseline space-x-2 mt-4">
+                                <span id="score-group-b" class="text-4xl font-black text-white tracking-tight">0</span>
+                                <span class="text-slate-400 text-sm">posts</span>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-700/50">
+                            <div class="flex justify-between text-xs text-slate-400 mb-1.5">
+                                <span id="percent-group-b-label">Progresso</span>
+                                <span id="percent-group-b">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-900/80 rounded-full h-2 overflow-hidden border border-slate-700/50">
+                                <div id="bar-group-b" class="bg-pink-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Calendário e Seção de Registros -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Coluna Esquerda: Calendário Interativo (7 cols) -->
+                    <div class="lg:col-span-7 bg-slate-800/80 border border-slate-700 rounded-3xl p-6 shadow-xl flex flex-col">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 id="calendar-month-year" class="text-lg font-bold text-white tracking-tight">Mês Ano</h3>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="changeMonth(-1)" class="w-9 h-9 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all border border-slate-600/50">
+                                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                                </button>
+                                <button onclick="goToCurrentMonth()" class="px-3 h-9 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-all border border-slate-600/50">
+                                    Hoje
+                                </button>
+                                <button onclick="changeMonth(1)" class="w-9 h-9 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all border border-slate-600/50">
+                                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Dias da Semana -->
+                        <div class="grid grid-cols-7 gap-2 mb-2 text-center">
+                            <span class="text-xs font-semibold text-slate-500 uppercase">Dom</span>
+                            <span class="text-xs font-semibold text-slate-500 uppercase">Seg</span>
+                            <span class="text-xs font-semibold text-slate-500 uppercase">Ter</span>
+                            <span class="text-xs font-semibold text-slate-500 uppercase">Qua</span>
+                            <span class="text-xs font-semibold text-slate-500 uppercase">Qui</span>
+                            <span class="text-xs font-semibold text-slate-500 uppercase">Sex</span>
+                            <span class="text-xs font-semibold text-slate-500 uppercase">Sáb</span>
+                        </div>
+
+                        <!-- Grade de Dias do Mês -->
+                        <div id="calendar-grid" class="grid grid-cols-7 gap-2 flex-1">
+                            <!-- Gerado via JavaScript -->
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                            <div class="flex items-center gap-4">
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> <span id="legend-group-a">Grupo 1</span></span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-pink-500"></span> <span id="legend-group-b">Grupo 2</span></span>
+                            </div>
+                            <span class="italic">Clique em um dia para registrar posts</span>
+                        </div>
+                    </div>
+
+                    <!-- Coluna Direita: Registro do Dia Selecionado (5 cols) -->
+                    <div class="lg:col-span-5 bg-slate-800/80 border border-slate-700 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/50">
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Registro do Dia</h4>
+                                    <h3 id="selected-date-title" class="text-lg font-bold text-white">Selecione uma data</h3>
+                                </div>
+                                <span id="selected-date-status" class="text-xs bg-slate-700/60 text-slate-300 px-2.5 py-1 rounded-full">Nenhum selecionado</span>
+                            </div>
+
+                            <!-- Formulário de adição para o dia -->
+                            <div id="day-form-container" class="space-y-4 opacity-50 pointer-events-none transition-all">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Stories postados neste dia</p>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">Informe quantos stories do dia tiveram alguém de cada grupo.</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-700/60">
+                                        <label id="input-label-group-a" class="block text-xs font-semibold text-indigo-400">Grupo 1</label>
+                                        <p class="text-[10px] text-slate-500 mb-1.5">Qtd. de stories no dia</p>
+                                        <div class="flex items-center space-x-2">
+                                            <button onclick="adjustCount('a', -1)" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-all border border-slate-700">-</button>
+                                            <input type="number" id="count-group-a" min="0" value="0" onchange="updateCurrentDayInputs()" class="w-full bg-transparent text-center text-lg font-bold focus:outline-none text-white">
+                                            <button onclick="adjustCount('a', 1)" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-all border border-slate-700">+</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-700/60">
+                                        <label id="input-label-group-b" class="block text-xs font-semibold text-pink-400">Grupo 2</label>
+                                        <p class="text-[10px] text-slate-500 mb-1.5">Qtd. de stories no dia</p>
+                                        <div class="flex items-center space-x-2">
+                                            <button onclick="adjustCount('b', -1)" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-all border border-slate-700">-</button>
+                                            <input type="number" id="count-group-b" min="0" value="0" onchange="updateCurrentDayInputs()" class="w-full bg-transparent text-center text-lg font-bold focus:outline-none text-white">
+                                            <button onclick="adjustCount('b', 1)" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-all border border-slate-700">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Seção de Upload / Comprovação -->
+                                <div>
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Comprovação (Print / Foto)</label>
+                                    
+                                    <div class="border-2 border-dashed border-slate-700 hover:border-indigo-500/50 rounded-2xl p-4 text-center cursor-pointer transition-all bg-slate-900/40 relative group" id="photo-drop-zone" onclick="document.getElementById('photo-upload-input').click()">
+                                        <input type="file" id="photo-upload-input" accept="image/*" multiple class="hidden" onchange="handlePhotoUpload(event)">
+                                        <div id="upload-placeholder" class="space-y-1">
+                                            <div class="text-indigo-400 text-xl"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                                            <p class="text-xs font-medium text-slate-300">Clique, arraste ou cole os prints</p>
+                                            <p class="text-[10px] text-slate-500">Várias imagens por dia · PNG, JPG ou WEBP</p>
+                                        </div>
+                                    </div>
+                                    <div id="photo-grid" class="grid grid-cols-4 gap-2 mt-3"></div>
+                                    <p id="photo-count" class="text-[10px] text-slate-500 mt-1"></p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Notas / Observações</label>
+                                    <input type="text" id="day-notes" placeholder="Ex: Rolê no parque, churrasco..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 placeholder-slate-600">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-slate-700/50">
+                            <button onclick="saveDayRecord()" id="save-day-btn" disabled class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-floppy-disk"></i> <span id="save-day-label">Salvar Registros do Dia</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </main>
+        </div>
+
+        <!-- ==================== MODAL CONFIGURAÇÕES ==================== -->
+        <div id="settings-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-gear text-indigo-400"></i> Nomes dos Grupos</h3>
+                    <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nome do Grupo 1</label>
+                        <input type="text" id="settings-group-a" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nome do Grupo 2</label>
+                        <input type="text" id="settings-group-b" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white">
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-700">
+                        <button onclick="saveSettings()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow transition-all">Salvar Alterações</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== VISUALIZADOR DE PRINT ==================== -->
+        <div id="photo-viewer" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" onclick="closePhotoViewer()">
+            <img id="photo-viewer-img" src="" alt="Print" class="max-h-full max-w-full rounded-2xl shadow-2xl">
+            <button class="absolute top-4 right-4 w-10 h-10 rounded-xl bg-slate-800 text-slate-200 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- ==================== MODAL DE MENSAGEM / NOTIFICAÇÃO ==================== -->
+        <div id="notification-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center">
+                <div id="notif-icon" class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h3 id="notif-title" class="text-base font-bold text-white mb-1">Aviso</h3>
+                <p id="notif-message" class="text-xs text-slate-400 mb-5">Mensagem descritiva aqui.</p>
+                <button onclick="closeNotification()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition-all">Entendido</button>
+            </div>
+        </div>
+
     </div>
-    <div class="actions">
-      <button class="btn" id="btnBackup" type="button">Backup</button>
-      <button class="btn" id="btnGroups" type="button">Grupos</button>
-      <button class="btn primary" id="btnNew" type="button">+ Registrar story</button>
-    </div>
-  </header>
 
-  <div class="banner" id="banner" hidden></div>
+    <script>
+        // ================== CONFIGURAÇÃO DO FIREBASE ==================
+        // Firebase Console → Configurações do projeto → Seus apps → App da Web → "firebaseConfig".
+        // Esses valores são públicos por design: quem protege os dados são as regras do Firestore.
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8BYvl-FyfXIiez79lau59De3ZfhYBBp8",
+             authDomain: "scraping-e55a3.firebaseapp.com",
+            projectId: "scraping-e55a3",
+            storageBucket: "scraping-e55a3.firebasestorage.app",
+            messagingSenderId: "1009303763340",
+            appId: "1:1009303763340:web:71cb9294b405ed7aaebea9",
+            measurementId: "G-R9QV96P39K"
+};
 
-  <section class="summary" id="summary" aria-label="Resumo do mês"></section>
+        const configured = !firebaseConfig.apiKey.startsWith('COLE_');
+        let auth = null, db = null;
+        if (configured) {
+            firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.firestore();
+        }
+        const TS = () => firebase.firestore.FieldValue.serverTimestamp();
 
-  <section class="cal" aria-label="Calendário">
-    <div class="calhead">
-      <h2 id="monthLabel">—</h2>
-      <div class="nav">
-        <button type="button" id="prev" aria-label="Mês anterior">‹</button>
-        <button type="button" id="todayBtn" aria-label="Mês atual" style="width:auto;padding:0 12px;border-radius:999px;font-size:13px">Hoje</button>
-        <button type="button" id="next" aria-label="Próximo mês">›</button>
-      </div>
-    </div>
-    <div class="grid" id="grid"></div>
-    <div class="legend" id="legend"></div>
-  </section>
-  <p class="hint">Cada dia mostra o total de stories postados. As barrinhas coloridas indicam quantos tiveram alguém de cada grupo. Toque no dia para ver os detalhes.</p>
-</div>
+        // Estado Global da Aplicação (espaço único compartilhado)
+        let state = {
+            user: null,
+            settings: { groupAName: 'Grupo 1', groupBName: 'Grupo 2' },
+            records: {},          // 'YYYY-MM-DD' -> { countA, countB, notes, hasPhoto, updatedBy }
+            currentDateYear: new Date().getFullYear(),
+            currentDateMonth: new Date().getMonth(),
+            selectedDateString: null,
+            photos: [],           // [{ id, data, isNew }] do dia selecionado
+            removedPhotoIds: [],
+            unsub: [],
+            busy: false
+        };
 
-<!-- Registrar story -->
-<dialog id="dlgNew" aria-labelledby="newTitle">
-  <form class="mbody" id="formNew" method="dialog">
-    <div class="mhead"><h2 id="newTitle">Registrar story</h2><button class="x" type="button" data-close aria-label="Fechar">×</button></div>
-    <div class="drop" id="drop">
-      <div id="dropMsg">Cole o print aqui (Ctrl+V)<br>ou <label for="file">escolha uma imagem</label><br><span style="font-size:12px">No celular: tire o print do story e envie da galeria</span></div>
-      <img id="preview" alt="Print do story" hidden>
-      <input id="file" type="file" accept="image/*" hidden>
-    </div>
-    <div class="row">
-      <label class="field"><span>Data</span><input id="fDate" type="date" required></label>
-      <label class="field"><span>Hora</span><input id="fTime" type="time"></label>
-    </div>
-    <div class="field"><span>Tipo</span>
-      <div class="seg" id="fType">
-        <button type="button" class="chip" data-type="foto" aria-pressed="true">Foto</button>
-        <button type="button" class="chip" data-type="video" aria-pressed="false">Vídeo</button>
-      </div>
-    </div>
-    <div class="field"><span>Com quem postou</span>
-      <div class="seg" id="fGroups"></div>
-      <p class="hint">Sem grupo marcado, o story conta só no total do dia.</p>
-    </div>
-    <div class="foot">
-      <button type="button" class="btn danger" id="btnDiscard">Descartar</button>
-      <button type="submit" class="btn primary" id="btnSave">Salvar story</button>
-    </div>
-  </form>
-</dialog>
+        const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const $ = id => document.getElementById(id);
 
-<!-- Detalhe do dia -->
-<dialog id="dlgDay" aria-labelledby="dayTitle">
-  <div class="mbody">
-    <div class="mhead"><h2 id="dayTitle">Dia</h2><button class="x" type="button" data-close aria-label="Fechar">×</button></div>
-    <div class="dsum" id="daySum"></div>
-    <div class="list" id="dayList"></div>
-    <div class="foot"><span></span><button type="button" class="btn primary" id="btnNewDay">+ Registrar neste dia</button></div>
-  </div>
-</dialog>
+        // ================== INICIALIZAÇÃO ==================
+        window.onload = function() {
+            if (!configured) {
+                showAuthScreen();
+                showError("Configure o firebaseConfig no topo do script.");
+                return;
+            }
+            auth.onAuthStateChanged(user => {
+                if (user) enterApp(user);
+                else { stopListeners(); resetState(); showAuthScreen(); }
+            });
+        };
 
-<!-- Grupos -->
-<dialog id="dlgGroups" aria-labelledby="grpTitle">
-  <div class="mbody">
-    <div class="mhead"><h2 id="grpTitle">Grupos</h2><button class="x" type="button" data-close aria-label="Fechar">×</button></div>
-    <div class="list" id="grpList"></div>
-    <p class="hint" id="grpHint">Toque na cor para trocar. Só dá para remover um grupo que não esteja em nenhum story.</p>
-    <div class="foot">
-      <button type="button" class="btn" id="btnAddGroup">+ Novo grupo</button>
-      <button type="button" class="btn primary" id="btnSaveGroups">Salvar grupos</button>
-    </div>
-  </div>
-</dialog>
+        function resetState() {
+            state.user = null; state.records = {}; state.selectedDateString = null;
+            state.settings = { groupAName: 'Grupo 1', groupBName: 'Grupo 2' };
+            state.photos = []; state.removedPhotoIds = [];
+        }
 
-<!-- Backup -->
-<dialog id="dlgBackup" aria-labelledby="bkTitle">
-  <div class="mbody">
-    <div class="mhead"><h2 id="bkTitle">Backup</h2><button class="x" type="button" data-close aria-label="Fechar">×</button></div>
-    <p class="hint">Os registros e prints ficam salvos só neste navegador. Exporte um backup de tempos em tempos. O mesmo arquivo serve para levar os dados para outro aparelho.</p>
-    <p class="hint" id="bkInfo"></p>
-    <div class="foot">
-      <label class="btn" for="importFile" style="display:inline-flex;align-items:center">Importar backup</label>
-      <input id="importFile" type="file" accept="application/json,.json" hidden>
-      <button type="button" class="btn primary" id="btnExport">Exportar backup</button>
-    </div>
-    <p class="hint" id="importMsg"></p>
-  </div>
-</dialog>
+        // ================== AUTENTICAÇÃO (só login; usuários criados no console) ==================
+        function switchAuthTab() {}
 
-<div class="toast" id="toast" hidden></div>
+        async function handleAuthSubmit(event) {
+            event.preventDefault();
+            if (!auth || state.busy) return;
+            hideAuthMessages();
+            setAuthBusy(true);
+            try {
+                await auth.signInWithEmailAndPassword($('auth-username').value.trim(), $('auth-password').value);
+                $('auth-password').value = '';
+            } catch (err) {
+                showError(translateAuthError(err));
+            } finally {
+                setAuthBusy(false);
+            }
+        }
 
-<script>
-(() => {
-  const COLORS = ["--g0","--g1","--g2","--g3","--g4"];
-  const MAX_GROUPS = 5;
-  const DEFAULT_GROUPS = [{id:"g1",name:"Grupo 1",color:"--g0"},{id:"g2",name:"Grupo 2",color:"--g1"}];
-  const MONTHS = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
-  const WD = ["D","S","T","Q","Q","S","S"];
+        function translateAuthError(err) {
+            const c = err && err.code || '';
+            if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-login-credentials'].includes(c)) return "E-mail ou senha incorretos.";
+            if (c === 'auth/invalid-email') return "E-mail inválido.";
+            if (c === 'auth/user-disabled') return "Este acesso foi desativado.";
+            if (c === 'auth/too-many-requests') return "Muitas tentativas. Aguarde alguns minutos.";
+            if (c === 'auth/network-request-failed') return "Sem conexão. Verifique a internet.";
+            return "Não foi possível entrar: " + (err.message || 'erro desconhecido');
+        }
 
-  const state = {
-    groups: DEFAULT_GROUPS.slice(), handle: "",
-    stories: [], // {id,date,time,type,groups[],imageId?,thumb?}
-    view: new Date(), openDay: null
-  };
-  state.view.setDate(1);
+        function setAuthBusy(b) {
+            state.busy = b;
+            $('auth-submit-btn').disabled = b;
+            $('auth-submit-btn').innerText = b ? "Aguarde..." : "Acessar";
+        }
+        function hideAuthMessages() { $('auth-error').classList.add('hidden'); }
+        function showError(msg) { const e = $('auth-error'); e.innerText = msg; e.classList.remove('hidden'); }
 
-  const $ = id => document.getElementById(id);
-  const pad = n => String(n).padStart(2,"0");
-  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const todayStr = () => ymd(new Date());
-  const groupById = id => state.groups.find(g => g.id === id);
-  const toast = msg => { const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2200); };
+        async function handleLogout() { await auth.signOut(); }
 
-  // ---------- Render ----------
-  function storiesOn(date){ return state.stories.filter(s=>s.date===date).sort((a,b)=>(a.time||"").localeCompare(b.time||"")); }
+        function showAuthScreen() {
+            $('auth-screen').classList.remove('hidden');
+            $('dashboard-screen').classList.add('hidden');
+        }
 
-  function render(){
-    const y=state.view.getFullYear(), m=state.view.getMonth();
-    $("monthLabel").textContent = `${MONTHS[m]} ${y}`;
-    const prefix = `${y}-${pad(m+1)}-`;
-    const monthStories = state.stories.filter(s=>s.date.startsWith(prefix));
+        // ================== DADOS EM TEMPO REAL ==================
+        function stopListeners() { state.unsub.forEach(u => u()); state.unsub = []; }
 
-    // resumo
-    const days = new Set(monthStories.map(s=>s.date)).size;
-    const sum = $("summary"); sum.innerHTML="";
-    const stat=(k,v,color)=>{const d=document.createElement("div");d.className="stat";
-      const kk=document.createElement("span");kk.className="k";
-      if(color){const dot=document.createElement("i");dot.className="dot";dot.style.background=`var(${color})`;kk.append(dot);}
-      kk.append(document.createTextNode(k));
-      const vv=document.createElement("span");vv.className="v";vv.textContent=v;d.append(kk,vv);sum.append(d);};
-    stat("Total no mês", monthStories.length);
-    state.groups.forEach(g=>stat(g.name, monthStories.filter(s=>s.groups.includes(g.id)).length, g.color));
-    stat("Dias com post", days);
+        function onDenied(err) {
+            stopListeners();
+            const msg = err && err.code === 'permission-denied'
+                ? "Seu e-mail não tem permissão para acessar este espaço."
+                : "Erro ao carregar os dados: " + (err.message || err);
+            auth.signOut().finally(() => showError(msg));
+        }
 
-    // calendário
-    const grid=$("grid"); grid.innerHTML="";
-    WD.forEach(w=>{const e=document.createElement("div");e.className="wd";e.textContent=w;grid.append(e);});
-    const first=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate(), tStr=todayStr();
-    for(let i=0;i<first;i++){const e=document.createElement("div");e.className="day out";grid.append(e);}
-    for(let d=1; d<=dim; d++){
-      const date=`${prefix}${pad(d)}`, list=monthStories.filter(s=>s.date===date);
-      const b=document.createElement("button"); b.type="button";
-      b.className="day"+(list.length?"":" empty")+(date===tStr?" today":"");
-      b.setAttribute("aria-label",`${d} de ${MONTHS[m]}: ${list.length} stories`);
-      const n=document.createElement("span");n.className="n";n.textContent=d;
-      const c=document.createElement("span");c.className="c";c.textContent=list.length||"0";
-      const bars=document.createElement("div");bars.className="bars";
-      state.groups.forEach(g=>{const k=list.filter(s=>s.groups.includes(g.id)).length;
-        for(let i=0;i<Math.min(k,4);i++){const s=document.createElement("span");s.style.background=`var(${g.color})`;bars.append(s);} });
-      b.append(n,c,bars);
-      b.onclick=()=>openDay(date);
-      grid.append(b);
-    }
-    const lg=$("legend"); lg.innerHTML="";
-    state.groups.forEach(g=>{const s=document.createElement("span");const dot=document.createElement("i");dot.className="dot";dot.style.background=`var(${g.color})`;s.append(dot,document.createTextNode(g.name));lg.append(s);});
+        function enterApp(user) {
+            stopListeners();
+            state.user = user;
+            let gotSettings = false, gotRecords = false;
+            const ready = () => { if (gotSettings && gotRecords) showDashboard(); };
 
-    if(!$("handle").matches(":focus")) $("handle").value=state.handle;
-    if($("dlgDay").open && state.openDay) renderDay();
-  }
+            state.unsub.push(db.doc('settings/main').onSnapshot(snap => {
+                if (snap.exists) state.settings = { groupAName: snap.data().groupAName, groupBName: snap.data().groupBName };
+                gotSettings = true;
+                if (gotRecords) showDashboard(); else ready();
+            }, onDenied));
 
-  // ---------- Dia ----------
-  function fmtDay(date){const [y,m,d]=date.split("-").map(Number);const wd=new Date(y,m-1,d).toLocaleDateString("pt-BR",{weekday:"long"});return `${wd}, ${d} de ${MONTHS[m-1]}`;}
-  function openDay(date){state.openDay=date;renderDay();if(!$("dlgDay").open)$("dlgDay").showModal();}
-  function renderDay(){
-    const date=state.openDay, list=storiesOn(date);
-    $("dayTitle").textContent=fmtDay(date);
-    const ds=$("daySum"); ds.innerHTML="";
-    const pill=(txt,color)=>{const p=document.createElement("span");p.className="pill";if(color){const d=document.createElement("i");d.className="dot";d.style.background=`var(${color})`;p.append(d);}p.append(document.createTextNode(txt));ds.append(p);};
-    pill(`${list.length} ${list.length===1?"story":"stories"}`);
-    state.groups.forEach(g=>pill(`${g.name}: ${list.filter(s=>s.groups.includes(g.id)).length}`,g.color));
-    const fotos=list.filter(s=>s.type==="foto").length; pill(`${fotos} foto${fotos===1?"":"s"} · ${list.length-fotos} vídeo${list.length-fotos===1?"":"s"}`);
+            state.unsub.push(db.collection('records').onSnapshot(snap => {
+                state.records = {};
+                snap.forEach(d => { state.records[d.id] = d.data(); });
+                gotRecords = true;
+                if (gotSettings) { showDashboard(); refreshSelectedStatus(); } else ready();
+            }, onDenied));
+        }
 
-    const box=$("dayList"); box.innerHTML="";
-    if(!list.length){const e=document.createElement("div");e.className="emptyday";e.textContent="Nenhum story registrado neste dia.";box.append(e);return;}
-    list.forEach(s=>{
-      const it=document.createElement("div");it.className="item";
-      let th;
-      if(s.imageId){th=document.createElement("img");th.alt="Print do story";th.className="thumb";
-        imgURL(s.imageId).then(u=>{ if(u) th.src=u; else th.replaceWith(Object.assign(document.createElement("div"),{className:"thumb",textContent:"sem print"})); });}
-      else{th=document.createElement("div");th.className="thumb";th.textContent="sem print";}
-      const meta=document.createElement("div");meta.className="meta";
-      const t=document.createElement("div");t.className="t";t.textContent=s.time||"--:--";
-      const sm=document.createElement("small");sm.textContent=s.type==="video"?"Vídeo":"Foto";t.append(sm);
-      const chips=document.createElement("div");chips.className="seg";
-      state.groups.forEach(g=>{const c=document.createElement("button");c.type="button";c.className="chip";
-        c.style.setProperty("--chip",`var(${g.color})`);c.setAttribute("aria-pressed",s.groups.includes(g.id));
-        const d=document.createElement("i");d.className="dot";d.style.background=`var(${g.color})`;c.append(d,document.createTextNode(g.name));
-        c.onclick=()=>{const ng=s.groups.includes(g.id)?s.groups.filter(x=>x!==g.id):[...s.groups,g.id];saveStory({...s,groups:ng});};
-        chips.append(c);});
-      const ops=document.createElement("div");ops.className="ops";
-      const del=document.createElement("button");del.type="button";del.className="link danger";del.textContent="Excluir story";
-      del.onclick=()=>{ops.innerHTML="";const q=document.createElement("span");q.className="hint";q.textContent="Excluir de vez?";
-        const y=document.createElement("button");y.type="button";y.className="link danger";y.textContent="Sim, excluir";y.onclick=()=>deleteStory(s);
-        const n=document.createElement("button");n.type="button";n.className="link";n.textContent="Cancelar";n.onclick=renderDay;ops.append(q,y,n);};
-      ops.append(del);
-      meta.append(t,chips,ops);
-      it.append(th,meta);box.append(it);
-    });
-  }
+        function showDashboard() {
+            $('auth-screen').classList.add('hidden');
+            $('dashboard-screen').classList.remove('hidden');
 
-  // ---------- Registrar ----------
-  let pending = null; // {blob, url}
-  let fType = "foto", fGroups = [];
-  function openNew(date){
-    clearPending();
-    const now=new Date();
-    $("fDate").value = date || ymd(now);
-    $("fTime").value = date && date!==ymd(now) ? "" : `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    fType="foto"; fGroups=[];
-    renderNewChips();
-    $("dlgNew").showModal();
-  }
-  function renderNewChips(){
-    document.querySelectorAll("#fType .chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.type===fType));
-    const box=$("fGroups"); box.innerHTML="";
-    state.groups.forEach(g=>{const c=document.createElement("button");c.type="button";c.className="chip";
-      c.style.setProperty("--chip",`var(${g.color})`);c.setAttribute("aria-pressed",fGroups.includes(g.id));
-      const d=document.createElement("i");d.className="dot";d.style.background=`var(${g.color})`;c.append(d,document.createTextNode(g.name));
-      c.onclick=()=>{fGroups=fGroups.includes(g.id)?fGroups.filter(x=>x!==g.id):[...fGroups,g.id];renderNewChips();};
-      box.append(c);});
-  }
-  function clearPending(){ if(pending?.url) URL.revokeObjectURL(pending.url); pending=null; $("preview").hidden=true; $("preview").removeAttribute("src"); $("dropMsg").hidden=false; $("file").value=""; }
-  async function takeImage(file){
-    if(!file || !file.type.startsWith("image/")){toast("Envie uma imagem (print do story).");return;}
-    try{
-      const blob = await compress(file, 1100, .78);
-      clearPending();
-      pending = {blob, url:URL.createObjectURL(blob)};
-      $("preview").src=pending.url; $("preview").hidden=false; $("dropMsg").hidden=true;
-    }catch(e){toast("Não consegui ler essa imagem.");}
-  }
-  function loadImg(file){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(file);});}
-  async function compress(file,maxH,q){
-    const img=await loadImg(file);
-    const s=Math.min(1,maxH/Math.max(img.naturalHeight,img.naturalWidth));
-    const cv=document.createElement("canvas");cv.width=Math.round(img.naturalWidth*s);cv.height=Math.round(img.naturalHeight*s);
-    cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
-    URL.revokeObjectURL(img.src);
-    return await new Promise(r=>cv.toBlob(r,"image/jpeg",q));
-  }
-  function blobToDataURL(b){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b);});}
-  async function smallThumb(blob){ return blobToDataURL(await compress(blob,360,.6)); }
+            const s = state.settings;
+            $('user-display-badge').innerText = state.user.email;
+            $('label-group-a').innerText = s.groupAName;
+            $('label-group-b').innerText = s.groupBName;
+            $('input-label-group-a').innerText = s.groupAName;
+            $('input-label-group-b').innerText = s.groupBName;
+            $('legend-group-a').innerText = s.groupAName;
+            $('legend-group-b').innerText = s.groupBName;
 
-  $("file").onchange=e=>takeImage(e.target.files[0]);
-  document.addEventListener("paste",e=>{ if(!$("dlgNew").open) return;
-    const item=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith("image/"));
-    if(item){e.preventDefault();takeImage(item.getAsFile());} });
-  const drop=$("drop");
-  drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("over");});
-  drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
-  drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("over");takeImage(e.dataTransfer.files[0]);});
-  document.querySelectorAll("#fType .chip").forEach(c=>c.onclick=()=>{fType=c.dataset.type;renderNewChips();});
-  $("btnDiscard").onclick=()=>{clearPending();$("dlgNew").close();toast("Story descartado");};
-  $("formNew").addEventListener("submit",async e=>{
-    e.preventDefault();
-    const date=$("fDate").value; if(!date){toast("Informe a data.");return;}
-    const btn=$("btnSave"); btn.disabled=true; btn.textContent="Salvando…";
-    const s={id:"s"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),date,time:$("fTime").value||"",type:fType,groups:fGroups.slice(),createdAt:new Date().toISOString()};
-    try{
-      if(pending){ try{ await idbPut(s.id, pending.blob); s.imageId=s.id; }catch(err){ toast("O print não pôde ser guardado; o story foi salvo sem ele."); } }
-      await saveStory(s);
-      clearPending(); $("dlgNew").close(); toast("Story salvo");
-      const [y,m]=date.split("-").map(Number); state.view=new Date(y,m-1,1); render();
-    }finally{btn.disabled=false;btn.textContent="Salvar story";}
-  });
+            renderCalendar();
+            updateScoresAndDashboard();
+        }
 
-  // ---------- Grupos ----------
-  let draft=[];
-  function openGroups(){draft=state.groups.map(g=>({...g}));renderGroups();$("dlgGroups").showModal();}
-  function renderGroups(){
-    const box=$("grpList"); box.innerHTML="";
-    draft.forEach((g,i)=>{
-      const row=document.createElement("div");row.className="grp";
-      const sw=document.createElement("button");sw.type="button";sw.className="swatch";sw.style.background=`var(${g.color})`;sw.setAttribute("aria-label","Trocar cor");
-      sw.onclick=()=>{g.color=COLORS[(COLORS.indexOf(g.color)+1)%COLORS.length];renderGroups();};
-      const inp=document.createElement("input");inp.type="text";inp.id="grp-"+g.id;inp.value=g.name;inp.maxLength=30;inp.oninput=()=>g.name=inp.value;
-      const used=state.stories.some(s=>s.groups.includes(g.id));
-      const rm=document.createElement("button");rm.type="button";rm.className="link danger";rm.textContent="Remover";
-      rm.disabled=used||draft.length<=1; if(used) rm.title="Esse grupo já está em stories";
-      rm.style.opacity=rm.disabled?.35:1;
-      rm.onclick=()=>{draft.splice(i,1);renderGroups();};
-      row.append(sw,inp,rm);box.append(row);
-    });
-    $("btnAddGroup").disabled=draft.length>=MAX_GROUPS;
-  }
-  $("btnAddGroup").onclick=()=>{const usedC=draft.map(g=>g.color);const color=COLORS.find(c=>!usedC.includes(c))||COLORS[0];
-    draft.push({id:"g"+Date.now().toString(36),name:`Grupo ${draft.length+1}`,color});renderGroups();
-    setTimeout(()=>{const l=$("grpList").querySelectorAll("input");l[l.length-1]?.select();},0);};
-  $("btnSaveGroups").onclick=async()=>{
-    draft.forEach((g,i)=>{g.name=(g.name||"").trim()||`Grupo ${i+1}`;});
-    state.groups=draft; await saveConfig(); $("dlgGroups").close(); render(); toast("Grupos salvos");
-  };
+        // ================== CALENDÁRIO ==================
+        function renderCalendar() {
+            const year = state.currentDateYear, month = state.currentDateMonth;
+            $('calendar-month-year').innerText = `${MONTHS[month]} ${year}`;
+            const grid = $('calendar-grid');
+            grid.innerHTML = '';
 
-  // ---------- Persistência (navegador) ----------
-  const LS_KEY="diarioStories:v1";
-  function persist(){
-    try{ localStorage.setItem(LS_KEY, JSON.stringify({handle:state.handle,groups:state.groups,stories:state.stories})); }
-    catch(e){ showBanner("Não foi possível salvar neste navegador (modo anônimo ou armazenamento bloqueado). Exporte um backup antes de fechar."); }
-  }
-  function loadLocal(){
-    try{ const raw=localStorage.getItem(LS_KEY); if(!raw) return;
-      const d=JSON.parse(raw); state.handle=d.handle||"";
-      if(Array.isArray(d.groups)&&d.groups.length) state.groups=d.groups;
-      if(Array.isArray(d.stories)) state.stories=d.stories.map(x=>({...x,groups:Array.isArray(x.groups)?x.groups:[]}));
-    }catch(e){ showBanner("Não foi possível ler os dados salvos neste navegador."); }
-  }
-  function showBanner(t){const b=$("banner");b.textContent=t;b.hidden=false;}
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
 
-  // prints no IndexedDB
-  let idb=null; const urlCache=new Map();
-  function openIDB(){ if(idb) return idb; idb=new Promise((res,rej)=>{ try{
-      const r=indexedDB.open("diario-stories",1);
-      r.onupgradeneeded=()=>r.result.createObjectStore("imgs");
-      r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
-    }catch(e){rej(e);} }); return idb; }
-  async function idbReq(mode,fn){ const d=await openIDB(); return new Promise((res,rej)=>{ const tx=d.transaction("imgs",mode); const r=fn(tx.objectStore("imgs")); tx.oncomplete=()=>res(r&&r.result); tx.onerror=()=>rej(tx.error); }); }
-  const idbPut=(k,blob)=>idbReq("readwrite",st=>st.put(blob,k));
-  const idbGet=k=>idbReq("readonly",st=>st.get(k));
-  const idbDel=k=>idbReq("readwrite",st=>st.delete(k));
-  const idbClear=()=>idbReq("readwrite",st=>st.clear());
-  async function imgURL(k){ if(urlCache.has(k)) return urlCache.get(k);
-    try{ const b=await idbGet(k); if(!b) return null; const u=URL.createObjectURL(b); urlCache.set(k,u); return u; }catch(e){ return null; } }
+            for (let i = 0; i < firstDayIndex; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = "aspect-square rounded-2xl bg-slate-900/20 border border-slate-800/40 opacity-30";
+                grid.appendChild(emptyCell);
+            }
 
-  async function saveStory(s){
-    const i=state.stories.findIndex(x=>x.id===s.id); if(i>=0) state.stories[i]=s; else state.stories.push(s);
-    persist(); render();
-  }
-  async function deleteStory(s){
-    state.stories=state.stories.filter(x=>x.id!==s.id); persist(); render(); toast("Story excluído");
-    if(s.imageId){ try{ await idbDel(s.imageId); }catch(e){} const u=urlCache.get(s.imageId); if(u){URL.revokeObjectURL(u);urlCache.delete(s.imageId);} }
-  }
-  let cfgTimer;
-  async function saveConfig(){ persist(); }
+            for (let day = 1; day <= totalDays; day++) {
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const selected = state.selectedDateString === dateKey;
+                const cell = document.createElement('div');
+                cell.className = "aspect-square rounded-2xl bg-slate-900/60 border border-slate-700/60 hover:border-indigo-500/50 p-2 flex flex-col justify-between cursor-pointer transition-all relative group overflow-hidden";
+                if (selected) cell.classList.add('border-indigo-500', 'ring-2', 'ring-indigo-500/30', 'bg-indigo-950/20');
 
-  // ---------- Backup ----------
-  function openBackup(){
-    const n=state.stories.length, p=state.stories.filter(s=>s.imageId).length;
-    $("bkInfo").textContent=`${n} ${n===1?"story registrado":"stories registrados"}, ${p} com print.`;
-    $("importMsg").textContent=""; $("dlgBackup").showModal();
-  }
-  $("btnExport").onclick=async()=>{
-    const btn=$("btnExport"); btn.disabled=true; btn.textContent="Gerando…";
-    try{
-      const images={};
-      for(const s of state.stories){ if(!s.imageId) continue; try{ const b=await idbGet(s.imageId); if(b) images[s.imageId]=await blobToDataURL(b); }catch(e){} }
-      const data={app:"diario-stories",version:1,exportedAt:new Date().toISOString(),handle:state.handle,groups:state.groups,stories:state.stories,images};
-      const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:"application/json"}));
-      a.download=`diario-stories-backup-${todayStr()}.json`; document.body.append(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(a.href),5000); toast("Backup exportado");
-    }finally{btn.disabled=false;btn.textContent="Exportar backup";}
-  };
-  $("importFile").onchange=async e=>{
-    const f=e.target.files[0]; e.target.value=""; if(!f) return;
-    try{
-      const d=JSON.parse(await f.text());
-      if(d.app!=="diario-stories"||!Array.isArray(d.stories)) throw new Error("formato");
-      try{ await idbClear(); }catch(_){}
-      urlCache.forEach(u=>URL.revokeObjectURL(u)); urlCache.clear();
-      for(const [k,v] of Object.entries(d.images||{})){ try{ await idbPut(k, await (await fetch(v)).blob()); }catch(_){} }
-      state.handle=d.handle||""; if(Array.isArray(d.groups)&&d.groups.length) state.groups=d.groups;
-      state.stories=d.stories.map(x=>({...x,groups:Array.isArray(x.groups)?x.groups:[]}));
-      persist(); render(); $("importMsg").textContent=`Backup importado: ${state.stories.length} stories.`; toast("Backup importado");
-    }catch(err){ $("importMsg").textContent="Esse arquivo não é um backup do Diário de Stories."; }
-  };
-  $("handle").addEventListener("input",e=>{state.handle=e.target.value.replace(/^@/,"").trim();clearTimeout(cfgTimer);cfgTimer=setTimeout(saveConfig,700);});
+                const r = state.records[dateKey];
+                let indicatorsHTML = '';
+                if (r) {
+                    const tags = [];
+                    if (r.countA > 0) tags.push(`<span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>`);
+                    if (r.countB > 0) tags.push(`<span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span>`);
+                    if (r.photoCount > 0 || r.hasPhoto) tags.push(`<i class="fa-solid fa-camera text-[8px] text-amber-400"></i>`);
+                    if (tags.length) indicatorsHTML = `<div class="flex items-center gap-1 mt-auto">${tags.join('')}</div>`;
+                }
+                const total = r ? (r.countA || 0) + (r.countB || 0) : 0;
+                cell.innerHTML = `
+                    <div class="flex justify-between items-center w-full">
+                        <span class="text-xs font-semibold ${selected ? 'text-indigo-400' : 'text-slate-300'}">${day}</span>
+                        ${total > 0 ? `<span class="text-[9px] font-bold bg-slate-800 text-slate-300 px-1.5 rounded">${total}</span>` : ''}
+                    </div>
+                    ${indicatorsHTML}`;
+                cell.onclick = () => selectDate(dateKey, day, MONTHS[month], year);
+                grid.appendChild(cell);
+            }
+        }
 
-  // ---------- Navegação / modais ----------
-  $("prev").onclick=()=>{state.view=new Date(state.view.getFullYear(),state.view.getMonth()-1,1);render();};
-  $("next").onclick=()=>{state.view=new Date(state.view.getFullYear(),state.view.getMonth()+1,1);render();};
-  $("todayBtn").onclick=()=>{const n=new Date();state.view=new Date(n.getFullYear(),n.getMonth(),1);render();};
-  $("btnNew").onclick=()=>openNew();
-  $("btnNewDay").onclick=()=>{const d=state.openDay;$("dlgDay").close();openNew(d);};
-  $("btnGroups").onclick=openGroups;
-  $("btnBackup").onclick=openBackup;
-  document.querySelectorAll("dialog").forEach(d=>{
-    d.addEventListener("click",e=>{ if(e.target===d) d.close(); });
-    d.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>d.close());
-  });
-  $("dlgNew").addEventListener("close",clearPending);
+        function changeMonth(direction) {
+            state.currentDateMonth += direction;
+            if (state.currentDateMonth > 11) { state.currentDateMonth = 0; state.currentDateYear++; }
+            else if (state.currentDateMonth < 0) { state.currentDateMonth = 11; state.currentDateYear--; }
+            renderCalendar();
+        }
 
-  loadLocal();
-  render();
-})();
-</script>
+        function goToCurrentMonth() {
+            const now = new Date();
+            state.currentDateYear = now.getFullYear();
+            state.currentDateMonth = now.getMonth();
+            renderCalendar();
+        }
+
+        // ================== REGISTRO DO DIA ==================
+        function refreshSelectedStatus() {
+            const key = state.selectedDateString;
+            if (!key) return;
+            const r = state.records[key];
+            const el = $('selected-date-status');
+            el.innerText = r && r.updatedBy ? `Editado por ${r.updatedBy.split('@')[0]}` : "Novo registro";
+            el.title = r && r.updatedBy ? r.updatedBy : '';
+            el.className = "text-xs bg-indigo-500/20 text-indigo-300 px-2.5 py-1 rounded-full border border-indigo-500/30 max-w-[50%] truncate";
+        }
+
+        async function selectDate(dateKey, day, monthName, year) {
+            state.selectedDateString = dateKey;
+            renderCalendar();
+
+            $('selected-date-title').innerText = `${day} de ${monthName} de ${year}`;
+            refreshSelectedStatus();
+            $('day-form-container').classList.remove('opacity-50', 'pointer-events-none');
+            $('save-day-btn').removeAttribute('disabled');
+
+            const r = state.records[dateKey] || { countA: 0, countB: 0, notes: '', hasPhoto: false };
+            $('count-group-a').value = r.countA || 0;
+            $('count-group-b').value = r.countB || 0;
+            $('day-notes').value = r.notes || '';
+
+            state.photos = []; state.removedPhotoIds = [];
+            $('photo-upload-input').value = '';
+            renderPhotos();
+            if (r.photoCount > 0 || r.hasPhoto) {
+                try {
+                    const found = [];
+                    const q = await db.collection('photos').where('date', '==', dateKey).get();
+                    q.forEach(d => found.push({ id: d.id, data: d.data().data, isNew: false, t: d.id }));
+                    if (r.hasPhoto) { // formato antigo: um print por dia em photos/AAAA-MM-DD
+                        const old = await db.doc('photos/' + dateKey).get();
+                        if (old.exists) found.unshift({ id: old.id, data: old.data().data, isNew: false, t: '' });
+                    }
+                    found.sort((a, b) => a.t.localeCompare(b.t));
+                    if (state.selectedDateString === dateKey) {
+                        state.photos = [...found, ...state.photos.filter(p => p.isNew)];
+                        renderPhotos();
+                    }
+                } catch (e) { /* sem prints */ }
+            }
+        }
+
+        function adjustCount(group, delta) {
+            const input = $(group === 'a' ? 'count-group-a' : 'count-group-b');
+            input.value = Math.max(0, Math.min(500, (parseInt(input.value) || 0) + delta));
+        }
+
+        function updateCurrentDayInputs() {}
+
+        // ================== PRINTS (vários por dia) ==================
+        const MAX_PHOTOS = 10;
+
+        async function handlePhotoUpload(event) {
+            await addImageFiles([...event.target.files]);
+            event.target.value = '';
+        }
+
+        // Colar prints com Ctrl+V (com um dia selecionado)
+        document.addEventListener('paste', (e) => {
+            if ($('dashboard-screen').classList.contains('hidden')) return;
+            const files = [...(e.clipboardData?.items || [])]
+                .filter(i => i.kind === 'file' && i.type.startsWith('image/'))
+                .map(i => i.getAsFile());
+            if (!files.length) return; // texto colado segue normal (ex.: campo de notas)
+            e.preventDefault();
+            if (!state.selectedDateString) {
+                showNotification("Selecione um dia", "Clique em um dia no calendário antes de colar o print.");
+                return;
+            }
+            addImageFiles(files);
+        });
+
+        // Arrastar e soltar prints na área de comprovação
+        (() => {
+            const zone = $('photo-drop-zone');
+            const on = () => zone.classList.add('border-indigo-500');
+            const off = () => zone.classList.remove('border-indigo-500');
+            zone.addEventListener('dragover', e => { e.preventDefault(); on(); });
+            zone.addEventListener('dragleave', off);
+            zone.addEventListener('drop', e => {
+                e.preventDefault(); off();
+                if (!state.selectedDateString) { showNotification("Selecione um dia", "Clique em um dia no calendário antes de enviar o print."); return; }
+                addImageFiles([...e.dataTransfer.files]);
+            });
+        })();
+
+        async function addImageFiles(files) {
+            const images = files.filter(f => f && f.type.startsWith('image/'));
+            if (!images.length) { if (files.length) showNotification("Arquivo inválido", "Envie imagens PNG, JPG ou WEBP."); return; }
+            const space = MAX_PHOTOS - state.photos.length;
+            if (space <= 0) { showNotification("Limite atingido", `Cada dia aceita até ${MAX_PHOTOS} prints.`); return; }
+            let failed = 0;
+            for (const file of images.slice(0, space)) {
+                try {
+                    // comprime até caber no limite do Firestore
+                    let data = null;
+                    for (const [side, q] of [[1280, 0.7], [1000, 0.6], [800, 0.55], [600, 0.5]]) {
+                        data = await compressImage(file, side, q);
+                        if (data.length < 600000) break;
+                    }
+                    if (data.length >= 600000) throw new Error('grande');
+                    state.photos.push({ id: null, data, isNew: true });
+                } catch (e) { failed++; }
+            }
+            renderPhotos();
+            if (images.length > space) showNotification("Limite atingido", `Só foram adicionados ${space} prints. Cada dia aceita até ${MAX_PHOTOS}.`);
+            else if (failed) showNotification("Erro", `${failed} imagem(ns) não puderam ser usadas.`);
+        }
+
+        function compressImage(file, maxSide, quality) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.naturalWidth * scale);
+                    canvas.height = Math.round(img.naturalHeight * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    URL.revokeObjectURL(img.src);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        function renderPhotos() {
+            const grid = $('photo-grid');
+            grid.innerHTML = '';
+            state.photos.forEach((p, i) => {
+                const box = document.createElement('div');
+                box.className = "relative aspect-[9/16] rounded-xl overflow-hidden border border-slate-700 bg-slate-900 cursor-zoom-in";
+                const img = document.createElement('img');
+                img.src = p.data; img.alt = `Print ${i + 1}`;
+                img.className = "w-full h-full object-cover";
+                box.onclick = () => openPhotoViewer(p.data);
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.title = 'Remover print';
+                del.className = "absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow";
+                del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                del.onclick = (e) => { e.stopPropagation(); removePhoto(i); };
+                box.append(img, del);
+                if (p.isNew) {
+                    const tag = document.createElement('span');
+                    tag.className = "absolute bottom-1 left-1 text-[9px] bg-amber-500 text-slate-900 font-bold px-1.5 rounded";
+                    tag.innerText = 'novo';
+                    box.append(tag);
+                }
+                grid.append(box);
+            });
+            const n = state.photos.length, pending = state.photos.some(p => p.isNew) || state.removedPhotoIds.length;
+            $('photo-count').innerText = n ? `${n} de ${MAX_PHOTOS} prints${pending ? ' · clique em Salvar para gravar' : ''}` : '';
+        }
+
+        function removePhoto(i) {
+            const [p] = state.photos.splice(i, 1);
+            if (p && p.id) state.removedPhotoIds.push(p.id);
+            renderPhotos();
+        }
+
+        function openPhotoViewer(src) { $('photo-viewer-img').src = src; $('photo-viewer').classList.remove('hidden'); }
+        function closePhotoViewer() { $('photo-viewer').classList.add('hidden'); $('photo-viewer-img').src = ''; }
+
+        // ================== SALVAR ==================
+        async function saveDayRecord() {
+            if (!state.selectedDateString || !state.user || state.busy) return;
+            const dateKey = state.selectedDateString;
+            const label = $('save-day-label');
+            state.busy = true; $('save-day-btn').disabled = true; label.innerText = "Salvando...";
+
+            const email = state.user.email;
+            const newPhotos = state.photos.filter(p => p.isNew);
+
+            try {
+                // grava prints em lotes para não passar do limite de tamanho por envio
+                const commits = [];
+                let batch = db.batch(), size = 0;
+                const flush = () => { commits.push(batch.commit()); batch = db.batch(); size = 0; };
+                for (const p of newPhotos) {
+                    if (size + p.data.length > 3500000) flush();
+                    p.id = `${dateKey}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+                    batch.set(db.doc('photos/' + p.id), { date: dateKey, data: p.data, createdAt: TS(), createdBy: email });
+                    size += p.data.length;
+                }
+                state.removedPhotoIds.forEach(id => batch.delete(db.doc('photos/' + id)));
+                batch.set(db.doc('records/' + dateKey), {
+                    countA: Math.min(500, Math.max(0, parseInt($('count-group-a').value) || 0)),
+                    countB: Math.min(500, Math.max(0, parseInt($('count-group-b').value) || 0)),
+                    notes: $('day-notes').value.trim().slice(0, 500),
+                    photoCount: state.photos.length,
+                    updatedAt: TS(),
+                    updatedBy: email
+                });
+                flush();
+                await Promise.all(commits);
+                newPhotos.forEach(p => { p.isNew = false; });
+                state.removedPhotoIds = [];
+                renderPhotos();
+                showNotification("Sucesso", "Registros do dia salvos com sucesso!");
+            } catch (err) {
+                newPhotos.forEach(p => { p.id = null; });
+                showNotification("Erro ao salvar", err.code === 'permission-denied' ? "Sem permissão para salvar. Confira se as regras do Firestore foram atualizadas." : (err.message || "Tente novamente."));
+            } finally {
+                state.busy = false; $('save-day-btn').disabled = false; label.innerText = "Salvar Registros do Dia";
+            }
+        }
+
+        // ================== PLACAR ==================
+        function updateScoresAndDashboard() {
+            const s = state.settings;
+            let totalA = 0, totalB = 0;
+            for (const k in state.records) {
+                totalA += state.records[k].countA || 0;
+                totalB += state.records[k].countB || 0;
+            }
+            const totalOverall = totalA + totalB;
+            $('score-group-a').innerText = totalA;
+            $('score-group-b').innerText = totalB;
+            $('total-overall-posts').innerText = totalOverall;
+
+            let percentA = 50, percentB = 50;
+            if (totalOverall > 0) { percentA = Math.round((totalA / totalOverall) * 100); percentB = 100 - percentA; }
+            $('percent-group-a').innerText = `${percentA}%`;
+            $('bar-group-a').style.width = `${percentA}%`;
+            $('percent-group-b').innerText = `${percentB}%`;
+            $('bar-group-b').style.width = `${percentB}%`;
+
+            const diffText = $('battle-diff-text'), leadText = $('battle-lead-text'), icon = $('battle-status-icon');
+            if (totalOverall === 0) {
+                diffText.innerText = "Nenhum post registrado";
+                leadText.innerText = "Comece a registrar no calendário.";
+                icon.innerHTML = `<i class="fa-solid fa-scale-balanced"></i>`;
+                icon.className = "text-3xl text-slate-400 mb-2";
+            } else if (totalA !== totalB) {
+                const leaderA = totalA > totalB;
+                const name = leaderA ? s.groupAName : s.groupBName;
+                diffText.innerText = `Diferença: +${Math.abs(totalA - totalB)} para ${name}`;
+                leadText.innerText = `${name} está liderando a contagem!`;
+                icon.innerHTML = `<i class="fa-solid fa-trophy"></i>`;
+                icon.className = `text-3xl ${leaderA ? 'text-indigo-400' : 'text-pink-400'} mb-2`;
+            } else {
+                diffText.innerText = "Empate Perfeito!";
+                leadText.innerText = "Os dois grupos estão empatados em número de stories.";
+                icon.innerHTML = `<i class="fa-solid fa-handshake"></i>`;
+                icon.className = "text-3xl text-amber-400 mb-2";
+            }
+        }
+
+        // ================== CONFIGURAÇÕES ==================
+        function openSettingsModal() {
+            $('settings-group-a').value = state.settings.groupAName;
+            $('settings-group-b').value = state.settings.groupBName;
+            $('settings-modal').classList.remove('hidden');
+        }
+        function closeSettingsModal() { $('settings-modal').classList.add('hidden'); }
+
+        async function saveSettings() {
+            const groupAName = ($('settings-group-a').value.trim() || 'Grupo 1').slice(0, 40);
+            const groupBName = ($('settings-group-b').value.trim() || 'Grupo 2').slice(0, 40);
+            try {
+                await db.doc('settings/main').set({ groupAName, groupBName, updatedAt: TS(), updatedBy: state.user.email });
+                closeSettingsModal();
+                showNotification("Configurações Atualizadas", "Os nomes dos grupos foram salvos para todos.");
+            } catch (err) {
+                showNotification("Erro", err.code === 'permission-denied' ? "Sem permissão para salvar." : err.message);
+            }
+        }
+
+        // ================== NOTIFICAÇÃO ==================
+        function showNotification(title, message) {
+            $('notif-title').innerText = title;
+            $('notif-message').innerText = message;
+            $('notification-modal').classList.remove('hidden');
+        }
+        function closeNotification() { $('notification-modal').classList.add('hidden'); }
+    </script>
 </body>
 </html>
