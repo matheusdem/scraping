@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Diário de Stories</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: header + resumo do mês + calendário compacto 7 colunas; modais para registro, dia e grupos */
+:root{
+  --bg:#f5f4f8; --surface:#ffffff; --surface-2:#efedf4; --line:#dcd8e6;
+  --fg:#1d1a26; --muted:#6b6579; --accent:#4b3bd1; --accent-fg:#ffffff;
+  --danger:#c2334d; --today:#4b3bd1;
+  --g0:#2f6fed; --g1:#d9467a; --g2:#13957a; --g3:#d98a12; --g4:#7a52c7;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14121b; --surface:#1d1a27; --surface-2:#262233; --line:#363046;
+  --fg:#ece9f4; --muted:#a39db3; --accent:#8f83ff; --accent-fg:#14121b;
+  --danger:#ff6b85; --today:#8f83ff;
+  --g0:#5f92ff; --g1:#f0709c; --g2:#3cc4a3; --g3:#f2ab3c; --g4:#a587ee;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14121b; --surface:#1d1a27; --surface-2:#262233; --line:#363046;
+  --fg:#ece9f4; --muted:#a39db3; --accent:#8f83ff; --accent-fg:#14121b;
+  --danger:#ff6b85; --today:#8f83ff;
+  --g0:#5f92ff; --g1:#f0709c; --g2:#3cc4a3; --g3:#f2ab3c; --g4:#a587ee;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 48px;display:flex;flex-direction:column;gap:18px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,.day:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:1.6rem}
+h2{font-size:1.15rem}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.handle{display:flex;align-items:center;gap:6px;color:var(--muted);margin-top:4px}
+.handle input{border:none;background:transparent;color:var(--fg);font:500 15px var(--body);padding:2px 4px;border-radius:6px;width:180px}
+.handle input:hover{background:var(--surface-2)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 14px;border-radius:999px;font-weight:600;font-size:14px}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.banner{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;font-size:14px;color:var(--muted)}
+
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .k{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v{font-family:var(--display);font-size:1.5rem;font-variant-numeric:tabular-nums}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+
+.cal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.calhead h2{text-transform:capitalize}
+.nav{display:flex;gap:4px}
+.nav button{border:1px solid var(--line);background:transparent;width:34px;height:34px;border-radius:50%;font-size:16px}
+.nav button:hover{background:var(--surface-2)}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.wd{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center;padding-bottom:4px}
+.day{aspect-ratio:1/1;max-width:100%;border:1px solid transparent;background:var(--surface-2);border-radius:8px;padding:5px;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;min-width:0}
+.day:hover{border-color:var(--line)}
+.day.out{visibility:hidden}
+.day.today{border-color:var(--today)}
+.day .n{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.day.today .n{color:var(--today);font-weight:600}
+.day .c{font-family:var(--display);font-size:1.15rem;line-height:1;font-variant-numeric:tabular-nums;align-self:flex-end}
+.day.empty .c{color:transparent}
+.bars{display:flex;gap:2px;height:4px}
+.bars span{border-radius:2px;flex:1}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:10px}
+.legend span{display:flex;align-items:center;gap:6px}
+
+dialog{border:none;border-radius:16px;padding:0;background:var(--surface);color:var(--fg);width:min(520px,calc(100vw - 32px));max-height:calc(100dvh - 48px)}
+dialog::backdrop{background:rgba(10,8,20,.5)}
+.mbody{padding:18px;display:flex;flex-direction:column;gap:14px}
+.mhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.x{border:none;background:transparent;font-size:22px;line-height:1;color:var(--muted);width:32px;height:32px;border-radius:50%}
+.x:hover{background:var(--surface-2)}
+.drop{border:2px dashed var(--line);border-radius:12px;min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px;color:var(--muted);font-size:14px;background:var(--surface-2);position:relative}
+.drop.over{border-color:var(--accent)}
+.drop img{max-height:300px;border-radius:8px;display:block}
+.drop label{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:4px;flex:1 1 140px;min-width:0}
+.field>span{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.field input{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:8px 10px;font:inherit}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{border-color:var(--chip,var(--accent));background:color-mix(in srgb,var(--chip,var(--accent)) 14%,var(--surface))}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+
+.dsum{display:flex;gap:8px;flex-wrap:wrap}
+.dsum .pill{background:var(--surface-2);border-radius:999px;padding:4px 10px;font-size:13px;display:inline-flex;gap:6px;align-items:center;font-variant-numeric:tabular-nums}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px}
+.thumb{width:72px;height:110px;border-radius:8px;background:var(--surface-2);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted)}
+.item .meta{display:flex;flex-direction:column;gap:8px;min-width:0}
+.item .t{font-weight:600;font-variant-numeric:tabular-nums}
+.item .t small{font-weight:400;color:var(--muted);margin-left:6px}
+.item .ops{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.link{border:none;background:none;padding:0;font-size:13px;color:var(--muted);text-decoration:underline}
+.link.danger{color:var(--danger)}
+.emptyday{color:var(--muted);font-size:14px;text-align:center;padding:24px 0}
+.grp{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.grp input[type=text]{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:8px 10px;font:inherit;min-width:0}
+.swatch{width:22px;height:22px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;font-weight:500}
+@media (max-width:480px){.day{padding:3px}.day .c{font-size:.95rem}h1{font-size:1.35rem}}
+@media (prefers-reduced-motion:no-preference){.day,.btn,.chip{transition:background .15s,border-color .15s}}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Diário de Stories</h1>
+      <div class="handle">Perfil acompanhado: <span>@</span><input id="handle" type="text" placeholder="usuario" aria-label="Perfil acompanhado"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnBackup" type="button">Backup</button>
+      <button class="btn" id="btnGroups" type="button">Grupos</button>
+      <button class="btn primary" id="btnNew" type="button">+ Registrar story</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="summary" id="summary" aria-label="Resumo do mês"></section>
+
+  <section class="cal" aria-label="Calendário">
+    <div class="calhead">
+      <h2 id="monthLabel">—</h2>
+      <div class="nav">
+        <button type="button" id="prev" aria-label="Mês anterior">‹</button>
+        <button type="button" id="todayBtn" aria-label="Mês atual" style="width:auto;padding:0 12px;border-radius:999px;font-size:13px">Hoje</button>
+        <button type="button" id="next" aria-label="Próximo mês">›</button>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+  <p class="hint">Cada dia mostra o total de stories postados. As barrinhas coloridas indicam quantos tiveram alguém de cada grupo. Toque no dia para ver os detalhes.</p>
+</div>
+
+<!-- Registrar story -->
+<dialog id="dlgNew" aria-labelledby="newTitle">
+  <form class="mbody" id="formNew" method="dialog">
+    <div class="mhead"><h2 id="newTitle">Registrar story</h2><button class="x" type="button" data-close aria-label="Fechar">×</button></div>
+    <div class="drop" id="drop">
+      <div id="dropMsg">Cole o print aqui (Ctrl+V)<br>ou <label for="file">escolha uma imagem</label><br><span style="font-size:12px">No celular: tire o print do story e envie da galeria</span></div>
+      <img id="preview" alt="Print do story" hidden>
+      <input id="file" type="file" accept="image/*" hidden>
+    </div>
+    <div class="row">
+      <label class="field"><span>Data</span><input id="fDate" type="date" required></label>
+      <label class="field"><span>Hora</span><input id="fTime" type="time"></label>
+    </div>
+    <div class="field"><span>Tipo</span>
+      <div class="seg" id="fType">
+        <button type="button" class="chip" data-type="foto" aria-pressed="true">Foto</button>
+        <button type="button" class="chip" data-type="video" aria-pressed="false">Vídeo</button>
+      </div>
+    </div>
+    <div class="field"><span>Com quem postou</span>
+      <div class="seg" id="fGroups"></div>
+      <p class="hint">Sem grupo marcado, o story conta só no total do dia.</p>
+    </div>
+    <div class="foot">
+      <button type="button" class="btn danger" id="btnDiscard">Descartar</button>
+      <button type="submit" class="btn primary" id="btnSave">Salvar story</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Detalhe do dia -->
+<dialog id="dlgDay" aria-labelledby="dayTitle">
+  <div class="mbody">
+    <div class="mhead"><h2 id="dayTitle">Dia</h2><button class="x" type="button" data-close aria-label="Fechar">×</button></div>
+    <div class="dsum" id="daySum"></div>
+    <div class="list" id="dayList"></div>
+    <div class="foot"><span></span><button type="button" class="btn primary" id="btnNewDay">+ Registrar neste dia</button></div>
+  </div>
+</dialog>
+
+<!-- Grupos -->
+<dialog id="dlgGroups" aria-labelledby="grpTitle">
+  <div class="mbody">
+    <div class="mhead"><h2 id="grpTitle">Grupos</h2><button class="x" type="button" data-close aria-label="Fechar">×</button></div>
+    <div class="list" id="grpList"></div>
+    <p class="hint" id="grpHint">Toque na cor para trocar. Só dá para remover um grupo que não esteja em nenhum story.</p>
+    <div class="foot">
+      <button type="button" class="btn" id="btnAddGroup">+ Novo grupo</button>
+      <button type="button" class="btn primary" id="btnSaveGroups">Salvar grupos</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Backup -->
+<dialog id="dlgBackup" aria-labelledby="bkTitle">
+  <div class="mbody">
+    <div class="mhead"><h2 id="bkTitle">Backup</h2><button class="x" type="button" data-close aria-label="Fechar">×</button></div>
+    <p class="hint">Os registros e prints ficam salvos só neste navegador. Exporte um backup de tempos em tempos. O mesmo arquivo serve para levar os dados para outro aparelho.</p>
+    <p class="hint" id="bkInfo"></p>
+    <div class="foot">
+      <label class="btn" for="importFile" style="display:inline-flex;align-items:center">Importar backup</label>
+      <input id="importFile" type="file" accept="application/json,.json" hidden>
+      <button type="button" class="btn primary" id="btnExport">Exportar backup</button>
+    </div>
+    <p class="hint" id="importMsg"></p>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const COLORS = ["--g0","--g1","--g2","--g3","--g4"];
+  const MAX_GROUPS = 5;
+  const DEFAULT_GROUPS = [{id:"g1",name:"Grupo 1",color:"--g0"},{id:"g2",name:"Grupo 2",color:"--g1"}];
+  const MONTHS = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  const WD = ["D","S","T","Q","Q","S","S"];
+
+  const state = {
+    groups: DEFAULT_GROUPS.slice(), handle: "",
+    stories: [], // {id,date,time,type,groups[],imageId?,thumb?}
+    view: new Date(), openDay: null
+  };
+  state.view.setDate(1);
+
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2,"0");
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const todayStr = () => ymd(new Date());
+  const groupById = id => state.groups.find(g => g.id === id);
+  const toast = msg => { const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2200); };
+
+  // ---------- Render ----------
+  function storiesOn(date){ return state.stories.filter(s=>s.date===date).sort((a,b)=>(a.time||"").localeCompare(b.time||"")); }
+
+  function render(){
+    const y=state.view.getFullYear(), m=state.view.getMonth();
+    $("monthLabel").textContent = `${MONTHS[m]} ${y}`;
+    const prefix = `${y}-${pad(m+1)}-`;
+    const monthStories = state.stories.filter(s=>s.date.startsWith(prefix));
+
+    // resumo
+    const days = new Set(monthStories.map(s=>s.date)).size;
+    const sum = $("summary"); sum.innerHTML="";
+    const stat=(k,v,color)=>{const d=document.createElement("div");d.className="stat";
+      const kk=document.createElement("span");kk.className="k";
+      if(color){const dot=document.createElement("i");dot.className="dot";dot.style.background=`var(${color})`;kk.append(dot);}
+      kk.append(document.createTextNode(k));
+      const vv=document.createElement("span");vv.className="v";vv.textContent=v;d.append(kk,vv);sum.append(d);};
+    stat("Total no mês", monthStories.length);
+    state.groups.forEach(g=>stat(g.name, monthStories.filter(s=>s.groups.includes(g.id)).length, g.color));
+    stat("Dias com post", days);
+
+    // calendário
+    const grid=$("grid"); grid.innerHTML="";
+    WD.forEach(w=>{const e=document.createElement("div");e.className="wd";e.textContent=w;grid.append(e);});
+    const first=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate(), tStr=todayStr();
+    for(let i=0;i<first;i++){const e=document.createElement("div");e.className="day out";grid.append(e);}
+    for(let d=1; d<=dim; d++){
+      const date=`${prefix}${pad(d)}`, list=monthStories.filter(s=>s.date===date);
+      const b=document.createElement("button"); b.type="button";
+      b.className="day"+(list.length?"":" empty")+(date===tStr?" today":"");
+      b.setAttribute("aria-label",`${d} de ${MONTHS[m]}: ${list.length} stories`);
+      const n=document.createElement("span");n.className="n";n.textContent=d;
+      const c=document.createElement("span");c.className="c";c.textContent=list.length||"0";
+      const bars=document.createElement("div");bars.className="bars";
+      state.groups.forEach(g=>{const k=list.filter(s=>s.groups.includes(g.id)).length;
+        for(let i=0;i<Math.min(k,4);i++){const s=document.createElement("span");s.style.background=`var(${g.color})`;bars.append(s);} });
+      b.append(n,c,bars);
+      b.onclick=()=>openDay(date);
+      grid.append(b);
+    }
+    const lg=$("legend"); lg.innerHTML="";
+    state.groups.forEach(g=>{const s=document.createElement("span");const dot=document.createElement("i");dot.className="dot";dot.style.background=`var(${g.color})`;s.append(dot,document.createTextNode(g.name));lg.append(s);});
+
+    if(!$("handle").matches(":focus")) $("handle").value=state.handle;
+    if($("dlgDay").open && state.openDay) renderDay();
+  }
+
+  // ---------- Dia ----------
+  function fmtDay(date){const [y,m,d]=date.split("-").map(Number);const wd=new Date(y,m-1,d).toLocaleDateString("pt-BR",{weekday:"long"});return `${wd}, ${d} de ${MONTHS[m-1]}`;}
+  function openDay(date){state.openDay=date;renderDay();if(!$("dlgDay").open)$("dlgDay").showModal();}
+  function renderDay(){
+    const date=state.openDay, list=storiesOn(date);
+    $("dayTitle").textContent=fmtDay(date);
+    const ds=$("daySum"); ds.innerHTML="";
+    const pill=(txt,color)=>{const p=document.createElement("span");p.className="pill";if(color){const d=document.createElement("i");d.className="dot";d.style.background=`var(${color})`;p.append(d);}p.append(document.createTextNode(txt));ds.append(p);};
+    pill(`${list.length} ${list.length===1?"story":"stories"}`);
+    state.groups.forEach(g=>pill(`${g.name}: ${list.filter(s=>s.groups.includes(g.id)).length}`,g.color));
+    const fotos=list.filter(s=>s.type==="foto").length; pill(`${fotos} foto${fotos===1?"":"s"} · ${list.length-fotos} vídeo${list.length-fotos===1?"":"s"}`);
+
+    const box=$("dayList"); box.innerHTML="";
+    if(!list.length){const e=document.createElement("div");e.className="emptyday";e.textContent="Nenhum story registrado neste dia.";box.append(e);return;}
+    list.forEach(s=>{
+      const it=document.createElement("div");it.className="item";
+      let th;
+      if(s.imageId){th=document.createElement("img");th.alt="Print do story";th.className="thumb";
+        imgURL(s.imageId).then(u=>{ if(u) th.src=u; else th.replaceWith(Object.assign(document.createElement("div"),{className:"thumb",textContent:"sem print"})); });}
+      else{th=document.createElement("div");th.className="thumb";th.textContent="sem print";}
+      const meta=document.createElement("div");meta.className="meta";
+      const t=document.createElement("div");t.className="t";t.textContent=s.time||"--:--";
+      const sm=document.createElement("small");sm.textContent=s.type==="video"?"Vídeo":"Foto";t.append(sm);
+      const chips=document.createElement("div");chips.className="seg";
+      state.groups.forEach(g=>{const c=document.createElement("button");c.type="button";c.className="chip";
+        c.style.setProperty("--chip",`var(${g.color})`);c.setAttribute("aria-pressed",s.groups.includes(g.id));
+        const d=document.createElement("i");d.className="dot";d.style.background=`var(${g.color})`;c.append(d,document.createTextNode(g.name));
+        c.onclick=()=>{const ng=s.groups.includes(g.id)?s.groups.filter(x=>x!==g.id):[...s.groups,g.id];saveStory({...s,groups:ng});};
+        chips.append(c);});
+      const ops=document.createElement("div");ops.className="ops";
+      const del=document.createElement("button");del.type="button";del.className="link danger";del.textContent="Excluir story";
+      del.onclick=()=>{ops.innerHTML="";const q=document.createElement("span");q.className="hint";q.textContent="Excluir de vez?";
+        const y=document.createElement("button");y.type="button";y.className="link danger";y.textContent="Sim, excluir";y.onclick=()=>deleteStory(s);
+        const n=document.createElement("button");n.type="button";n.className="link";n.textContent="Cancelar";n.onclick=renderDay;ops.append(q,y,n);};
+      ops.append(del);
+      meta.append(t,chips,ops);
+      it.append(th,meta);box.append(it);
+    });
+  }
+
+  // ---------- Registrar ----------
+  let pending = null; // {blob, url}
+  let fType = "foto", fGroups = [];
+  function openNew(date){
+    clearPending();
+    const now=new Date();
+    $("fDate").value = date || ymd(now);
+    $("fTime").value = date && date!==ymd(now) ? "" : `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    fType="foto"; fGroups=[];
+    renderNewChips();
+    $("dlgNew").showModal();
+  }
+  function renderNewChips(){
+    document.querySelectorAll("#fType .chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.type===fType));
+    const box=$("fGroups"); box.innerHTML="";
+    state.groups.forEach(g=>{const c=document.createElement("button");c.type="button";c.className="chip";
+      c.style.setProperty("--chip",`var(${g.color})`);c.setAttribute("aria-pressed",fGroups.includes(g.id));
+      const d=document.createElement("i");d.className="dot";d.style.background=`var(${g.color})`;c.append(d,document.createTextNode(g.name));
+      c.onclick=()=>{fGroups=fGroups.includes(g.id)?fGroups.filter(x=>x!==g.id):[...fGroups,g.id];renderNewChips();};
+      box.append(c);});
+  }
+  function clearPending(){ if(pending?.url) URL.revokeObjectURL(pending.url); pending=null; $("preview").hidden=true; $("preview").removeAttribute("src"); $("dropMsg").hidden=false; $("file").value=""; }
+  async function takeImage(file){
+    if(!file || !file.type.startsWith("image/")){toast("Envie uma imagem (print do story).");return;}
+    try{
+      const blob = await compress(file, 1100, .78);
+      clearPending();
+      pending = {blob, url:URL.createObjectURL(blob)};
+      $("preview").src=pending.url; $("preview").hidden=false; $("dropMsg").hidden=true;
+    }catch(e){toast("Não consegui ler essa imagem.");}
+  }
+  function loadImg(file){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(file);});}
+  async function compress(file,maxH,q){
+    const img=await loadImg(file);
+    const s=Math.min(1,maxH/Math.max(img.naturalHeight,img.naturalWidth));
+    const cv=document.createElement("canvas");cv.width=Math.round(img.naturalWidth*s);cv.height=Math.round(img.naturalHeight*s);
+    cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+    URL.revokeObjectURL(img.src);
+    return await new Promise(r=>cv.toBlob(r,"image/jpeg",q));
+  }
+  function blobToDataURL(b){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b);});}
+  async function smallThumb(blob){ return blobToDataURL(await compress(blob,360,.6)); }
+
+  $("file").onchange=e=>takeImage(e.target.files[0]);
+  document.addEventListener("paste",e=>{ if(!$("dlgNew").open) return;
+    const item=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith("image/"));
+    if(item){e.preventDefault();takeImage(item.getAsFile());} });
+  const drop=$("drop");
+  drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("over");});
+  drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
+  drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("over");takeImage(e.dataTransfer.files[0]);});
+  document.querySelectorAll("#fType .chip").forEach(c=>c.onclick=()=>{fType=c.dataset.type;renderNewChips();});
+  $("btnDiscard").onclick=()=>{clearPending();$("dlgNew").close();toast("Story descartado");};
+  $("formNew").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const date=$("fDate").value; if(!date){toast("Informe a data.");return;}
+    const btn=$("btnSave"); btn.disabled=true; btn.textContent="Salvando…";
+    const s={id:"s"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),date,time:$("fTime").value||"",type:fType,groups:fGroups.slice(),createdAt:new Date().toISOString()};
+    try{
+      if(pending){ try{ await idbPut(s.id, pending.blob); s.imageId=s.id; }catch(err){ toast("O print não pôde ser guardado; o story foi salvo sem ele."); } }
+      await saveStory(s);
+      clearPending(); $("dlgNew").close(); toast("Story salvo");
+      const [y,m]=date.split("-").map(Number); state.view=new Date(y,m-1,1); render();
+    }finally{btn.disabled=false;btn.textContent="Salvar story";}
+  });
+
+  // ---------- Grupos ----------
+  let draft=[];
+  function openGroups(){draft=state.groups.map(g=>({...g}));renderGroups();$("dlgGroups").showModal();}
+  function renderGroups(){
+    const box=$("grpList"); box.innerHTML="";
+    draft.forEach((g,i)=>{
+      const row=document.createElement("div");row.className="grp";
+      const sw=document.createElement("button");sw.type="button";sw.className="swatch";sw.style.background=`var(${g.color})`;sw.setAttribute("aria-label","Trocar cor");
+      sw.onclick=()=>{g.color=COLORS[(COLORS.indexOf(g.color)+1)%COLORS.length];renderGroups();};
+      const inp=document.createElement("input");inp.type="text";inp.id="grp-"+g.id;inp.value=g.name;inp.maxLength=30;inp.oninput=()=>g.name=inp.value;
+      const used=state.stories.some(s=>s.groups.includes(g.id));
+      const rm=document.createElement("button");rm.type="button";rm.className="link danger";rm.textContent="Remover";
+      rm.disabled=used||draft.length<=1; if(used) rm.title="Esse grupo já está em stories";
+      rm.style.opacity=rm.disabled?.35:1;
+      rm.onclick=()=>{draft.splice(i,1);renderGroups();};
+      row.append(sw,inp,rm);box.append(row);
+    });
+    $("btnAddGroup").disabled=draft.length>=MAX_GROUPS;
+  }
+  $("btnAddGroup").onclick=()=>{const usedC=draft.map(g=>g.color);const color=COLORS.find(c=>!usedC.includes(c))||COLORS[0];
+    draft.push({id:"g"+Date.now().toString(36),name:`Grupo ${draft.length+1}`,color});renderGroups();
+    setTimeout(()=>{const l=$("grpList").querySelectorAll("input");l[l.length-1]?.select();},0);};
+  $("btnSaveGroups").onclick=async()=>{
+    draft.forEach((g,i)=>{g.name=(g.name||"").trim()||`Grupo ${i+1}`;});
+    state.groups=draft; await saveConfig(); $("dlgGroups").close(); render(); toast("Grupos salvos");
+  };
+
+  // ---------- Persistência (navegador) ----------
+  const LS_KEY="diarioStories:v1";
+  function persist(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({handle:state.handle,groups:state.groups,stories:state.stories})); }
+    catch(e){ showBanner("Não foi possível salvar neste navegador (modo anônimo ou armazenamento bloqueado). Exporte um backup antes de fechar."); }
+  }
+  function loadLocal(){
+    try{ const raw=localStorage.getItem(LS_KEY); if(!raw) return;
+      const d=JSON.parse(raw); state.handle=d.handle||"";
+      if(Array.isArray(d.groups)&&d.groups.length) state.groups=d.groups;
+      if(Array.isArray(d.stories)) state.stories=d.stories.map(x=>({...x,groups:Array.isArray(x.groups)?x.groups:[]}));
+    }catch(e){ showBanner("Não foi possível ler os dados salvos neste navegador."); }
+  }
+  function showBanner(t){const b=$("banner");b.textContent=t;b.hidden=false;}
+
+  // prints no IndexedDB
+  let idb=null; const urlCache=new Map();
+  function openIDB(){ if(idb) return idb; idb=new Promise((res,rej)=>{ try{
+      const r=indexedDB.open("diario-stories",1);
+      r.onupgradeneeded=()=>r.result.createObjectStore("imgs");
+      r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+    }catch(e){rej(e);} }); return idb; }
+  async function idbReq(mode,fn){ const d=await openIDB(); return new Promise((res,rej)=>{ const tx=d.transaction("imgs",mode); const r=fn(tx.objectStore("imgs")); tx.oncomplete=()=>res(r&&r.result); tx.onerror=()=>rej(tx.error); }); }
+  const idbPut=(k,blob)=>idbReq("readwrite",st=>st.put(blob,k));
+  const idbGet=k=>idbReq("readonly",st=>st.get(k));
+  const idbDel=k=>idbReq("readwrite",st=>st.delete(k));
+  const idbClear=()=>idbReq("readwrite",st=>st.clear());
+  async function imgURL(k){ if(urlCache.has(k)) return urlCache.get(k);
+    try{ const b=await idbGet(k); if(!b) return null; const u=URL.createObjectURL(b); urlCache.set(k,u); return u; }catch(e){ return null; } }
+
+  async function saveStory(s){
+    const i=state.stories.findIndex(x=>x.id===s.id); if(i>=0) state.stories[i]=s; else state.stories.push(s);
+    persist(); render();
+  }
+  async function deleteStory(s){
+    state.stories=state.stories.filter(x=>x.id!==s.id); persist(); render(); toast("Story excluído");
+    if(s.imageId){ try{ await idbDel(s.imageId); }catch(e){} const u=urlCache.get(s.imageId); if(u){URL.revokeObjectURL(u);urlCache.delete(s.imageId);} }
+  }
+  let cfgTimer;
+  async function saveConfig(){ persist(); }
+
+  // ---------- Backup ----------
+  function openBackup(){
+    const n=state.stories.length, p=state.stories.filter(s=>s.imageId).length;
+    $("bkInfo").textContent=`${n} ${n===1?"story registrado":"stories registrados"}, ${p} com print.`;
+    $("importMsg").textContent=""; $("dlgBackup").showModal();
+  }
+  $("btnExport").onclick=async()=>{
+    const btn=$("btnExport"); btn.disabled=true; btn.textContent="Gerando…";
+    try{
+      const images={};
+      for(const s of state.stories){ if(!s.imageId) continue; try{ const b=await idbGet(s.imageId); if(b) images[s.imageId]=await blobToDataURL(b); }catch(e){} }
+      const data={app:"diario-stories",version:1,exportedAt:new Date().toISOString(),handle:state.handle,groups:state.groups,stories:state.stories,images};
+      const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:"application/json"}));
+      a.download=`diario-stories-backup-${todayStr()}.json`; document.body.append(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),5000); toast("Backup exportado");
+    }finally{btn.disabled=false;btn.textContent="Exportar backup";}
+  };
+  $("importFile").onchange=async e=>{
+    const f=e.target.files[0]; e.target.value=""; if(!f) return;
+    try{
+      const d=JSON.parse(await f.text());
+      if(d.app!=="diario-stories"||!Array.isArray(d.stories)) throw new Error("formato");
+      try{ await idbClear(); }catch(_){}
+      urlCache.forEach(u=>URL.revokeObjectURL(u)); urlCache.clear();
+      for(const [k,v] of Object.entries(d.images||{})){ try{ await idbPut(k, await (await fetch(v)).blob()); }catch(_){} }
+      state.handle=d.handle||""; if(Array.isArray(d.groups)&&d.groups.length) state.groups=d.groups;
+      state.stories=d.stories.map(x=>({...x,groups:Array.isArray(x.groups)?x.groups:[]}));
+      persist(); render(); $("importMsg").textContent=`Backup importado: ${state.stories.length} stories.`; toast("Backup importado");
+    }catch(err){ $("importMsg").textContent="Esse arquivo não é um backup do Diário de Stories."; }
+  };
+  $("handle").addEventListener("input",e=>{state.handle=e.target.value.replace(/^@/,"").trim();clearTimeout(cfgTimer);cfgTimer=setTimeout(saveConfig,700);});
+
+  // ---------- Navegação / modais ----------
+  $("prev").onclick=()=>{state.view=new Date(state.view.getFullYear(),state.view.getMonth()-1,1);render();};
+  $("next").onclick=()=>{state.view=new Date(state.view.getFullYear(),state.view.getMonth()+1,1);render();};
+  $("todayBtn").onclick=()=>{const n=new Date();state.view=new Date(n.getFullYear(),n.getMonth(),1);render();};
+  $("btnNew").onclick=()=>openNew();
+  $("btnNewDay").onclick=()=>{const d=state.openDay;$("dlgDay").close();openNew(d);};
+  $("btnGroups").onclick=openGroups;
+  $("btnBackup").onclick=openBackup;
+  document.querySelectorAll("dialog").forEach(d=>{
+    d.addEventListener("click",e=>{ if(e.target===d) d.close(); });
+    d.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>d.close());
+  });
+  $("dlgNew").addEventListener("close",clearPending);
+
+  loadLocal();
+  render();
+})();
+</script>
+</body>
+</html>
