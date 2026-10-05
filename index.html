@@ -478,7 +478,8 @@
             $('legend-group-a').innerText = s.groupAName;
             $('legend-group-b').innerText = s.groupBName;
 
-            renderCalendar();
+            if (state.selectedDateString) renderCalendar();
+            else selectToday(); // primeiro carregamento: já abre o dia de hoje
             updateScoresAndDashboard();
         }
 
@@ -538,6 +539,15 @@
             state.currentDateYear = now.getFullYear();
             state.currentDateMonth = now.getMonth();
             renderCalendar();
+        }
+
+        function selectToday() {
+            const now = new Date();
+            const year = now.getFullYear(), month = now.getMonth(), day = now.getDate();
+            state.currentDateYear = year;
+            state.currentDateMonth = month;
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            selectDate(dateKey, day, MONTHS[month], year);
         }
 
         // ================== REGISTRO DO DIA ==================
